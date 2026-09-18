@@ -1,13 +1,20 @@
 """Normalize messy North American phone number strings to E.164.
 
-Scope for now is NANP (US/Canada, +1) only. Extensions and other
-country codes are rejected rather than guessed at -- see README.
+Scope for now is NANP (US/Canada, +1) only. Other country codes are
+rejected rather than guessed at -- see README.
 """
 
 import re
 
 _PUNCTUATION = re.compile(r"[\s\-.()]")
-_TRAILING_EXT = re.compile(r"(ext\.?|x|extension)\s*\d+\s*$", re.IGNORECASE)
+
+# Extension marker plus the digits after it, anchored to the end of the
+# string. Covers "ext 204", "ext. 204", "extension 204", "x204", "x 204".
+# Capped at 7 digits -- anything longer isn't a real PBX extension and is
+# more likely a typo or a second phone number pasted in by mistake.
+_TRAILING_EXT = re.compile(
+    r"[\s,;./-]*(?:ext\.?|extension|x)[\s.:#-]*(\d{1,7})\s*$", re.IGNORECASE
+)
 
 
 class PhoneFormatError(ValueError):
@@ -18,9 +25,11 @@ def normalize(raw: str) -> str:
     """Return a NANP number as E.164, e.g. '+14155552671'.
 
     Accepts the usual mess: parens, dots, dashes, stray whitespace,
-    an optional leading 1 or +1. Rejects anything with letters,
-    extensions, or a non-NANP country code -- those need a human
-    to look at them rather than a guess.
+    an optional leading 1 or +1, and a trailing extension. Extensions
+    are appended using the RFC 3966 ';ext=' convention, e.g.
+    '+14155552671;ext=204'. Rejects anything with other letters or a
+    non-NANP country code -- those need a human to look at them
+    rather than a guess.
     """
     if raw is None:
         raise PhoneFormatError("input is None")
@@ -29,8 +38,13 @@ def normalize(raw: str) -> str:
     if not text:
         raise PhoneFormatError("empty input")
 
-    if _TRAILING_EXT.search(text):
-        raise PhoneFormatError(f"extensions are not supported: {raw!r}")
+    extension = None
+    ext_match = _TRAILING_EXT.search(text)
+    if ext_match:
+        extension = ext_match.group(1)
+        text = text[: ext_match.start()].strip()
+        if not text:
+            raise PhoneFormatError(f"extension with no number attached: {raw!r}")
 
     if any(ch.isalpha() for ch in text):
         raise PhoneFormatError(f"vanity/lettered numbers are not supported: {raw!r}")
@@ -58,4 +72,7 @@ def normalize(raw: str) -> str:
     if exchange_code[0] in "01":
         raise PhoneFormatError(f"invalid exchange code {exchange_code!r}: {raw!r}")
 
-    return "+1" + digits
+    result = "+1" + digits
+    if extension is not None:
+        result += ";ext=" + extension
+    return result

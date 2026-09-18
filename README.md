@@ -7,8 +7,8 @@ form (E.164, like `+14155552671`) or tells you exactly why it can't.
 
 Right now it only handles NANP numbers (US and Canada, `+1`). That
 covers the numbers I actually need to deal with day to day. Other
-country codes and extensions are rejected on purpose rather than
-half-guessed at -- see the roadmap below.
+country codes are rejected on purpose rather than half-guessed at --
+see the roadmap below.
 
 ## Usage
 
@@ -19,6 +19,7 @@ normalize("(415) 555-2671")      # "+14155552671"
 normalize("415.555.2671")        # "+14155552671"
 normalize("1-415-555-2671")      # "+14155552671"
 normalize("+1 415 555 2671")     # "+14155552671"
+normalize("415-555-2671 ext. 204")  # "+14155552671;ext=204"
 
 try:
     normalize("415-CALL-NOW")
