@@ -27,6 +27,17 @@ except PhoneFormatError as exc:
     print(exc)  # vanity/lettered numbers are not supported: '415-CALL-NOW'
 ```
 
+`classify()` takes a normalized number and says whether it's toll-free,
+premium-rate, or an ordinary line, based on NANP area code:
+
+```python
+from phonefmt import classify, normalize, TOLL_FREE
+
+classify(normalize("1-800-555-0199"))  # 'toll-free'
+classify(normalize("415-555-2671"))    # 'standard'
+classify(normalize("900-555-0199"))    # 'premium'
+```
+
 ## Why not just use a regex and call it done
 
 Because the awkward cases are where formatters like this actually
@@ -47,4 +58,13 @@ python -m unittest discover tests
 
 ## Status
 
-Early. Single function, NANP only. See below for what's next.
+Early, NANP only. `normalize()` turns messy input into E.164;
+`classify()` tells you whether a normalized number is toll-free,
+premium-rate, or an ordinary line.
+
+## Roadmap
+
+- [ ] international (non-NANP) country code support
+- [ ] CLI entry point for one-off lookups
+- [x] toll-free and premium area code classification
+- [ ] publish package metadata for PyPI
